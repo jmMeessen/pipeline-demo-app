@@ -25,10 +25,21 @@ spec:
         }
     }
     stages {
-        stage('Run maven') {
+        stage('build') {
             steps {
                 container('maven') {
                     sh './jenkins/build.sh'
+                    archiveArtifacts 'target/*.jar'
+                    stash(name: 'myStash', includes: 'target/**')
+                }
+            }
+        }
+        stage('test'){
+            steps { 
+                container('maven'){
+                    unstash 'myStash'
+                    sh './jenkins/test-backend.sh'
+                    junit 'target/surefire-reports/**/TEST*.xml'
                 }
             }
         }
