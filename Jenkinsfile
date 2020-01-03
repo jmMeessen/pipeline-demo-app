@@ -4,11 +4,6 @@ pipeline {
             label 'my-pod-template'
             defaultContainer 'jnlp'
             yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    some-label: some-label-value
 spec:
   containers:
   - name: maven
@@ -30,16 +25,18 @@ spec:
                 container('maven') {
                     sh './jenkins/build.sh'
                     archiveArtifacts 'target/*.jar'
-                    stash(name: 'myStash', includes: 'target/**')
                 }
             }
         }
         stage('test'){
             steps { 
                 container('maven'){
-                    //unstash 'myStash'
                     sh './jenkins/test-backend.sh'
                     junit 'target/surefire-reports/**/TEST*.xml'
+                }
+                sh 'env'
+                container('busybox') {
+                    sh 'env'
                 }
             }
         }
