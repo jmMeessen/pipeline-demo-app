@@ -37,7 +37,7 @@ spec:
         stage('test'){
             steps { 
                 container('maven'){
-                    unstash 'myStash'
+                    //unstash 'myStash'
                     sh './jenkins/test-backend.sh'
                     junit 'target/surefire-reports/**/TEST*.xml'
                 }
