@@ -1,157 +1,40 @@
 pipeline {
-  agent none
-  stages {
-    stage('Fluffy Build') {
-      parallel {
-        stage('Build Java 8') {
-          agent {
-            node {
-              label 'java8'
-            }
-
-          }
-          steps {
-            sh './jenkins/build.sh'
-            stash(name: 'Java 8', includes: 'target/**')
-          }
+    agent {
+        kubernetes {
+            label 'my-pod-template'
+            defaultContainer 'jnlp'
+            yaml """
+spec:
+  containers:
+  - name: maven
+    image: maven:alpine
+    command:
+    - cat
+    tty: true
+  - name: busybox
+    image: busybox
+    command:
+    - cat
+    tty: true
+"""
         }
-        stage('Build Java 7') {
-          agent {
-            node {
-              label 'java7'
-            }
-
-          }
-          steps {
-            sh './jenkins/build.sh'
-            archiveArtifacts 'target/*.jar'
-            stash(name: 'Java 7', includes: 'target/**')
-          }
-        }
-      }
     }
-    stage('Fluffy Test') {
-      parallel {
-        stage('Backend Java 8') {
-          agent {
-            node {
-              label 'java8'
-            }
+    stages {
+        stage('Test containers') {
+            steps {
+                //runs in the default containe (JNLP) 
+                sh 'env'
 
-          }
-          steps {
-            unstash 'Java 8'
-            sh './jenkins/test-backend.sh'
-            junit 'target/surefire-reports/**/TEST*.xml'
-          }
-        }
-        stage('Frontend') {
-          agent {
-            node {
-              label 'java8'
-            }
+                container('maven'){
+                    sh 'env'
+                    sh 'java -version'
+                    sh 'mvn -version'
+                }
 
-          }
-          steps {
-            unstash 'Java 8'
-            sh './jenkins/test-frontend.sh'
-            junit 'target/test-results/**/TEST*.xml'
-          }
-        }
-        stage('Performance Java 8') {
-          agent {
-            node {
-              label 'java8'
+                container('busybox') {
+                    sh 'env'
+                }
             }
-
-          }
-          steps {
-            unstash 'Java 8'
-            sh './jenkins/test-performance.sh'
-          }
         }
-        stage('Static Java 8') {
-          agent {
-            node {
-              label 'java8'
-            }
-
-          }
-          steps {
-            unstash 'Java 8'
-            sh './jenkins/test-static.sh'
-          }
-        }
-        stage('Backend Java 7') {
-          agent {
-            node {
-              label 'java7'
-            }
-
-          }
-          steps {
-            unstash 'Java 7'
-            sh './jenkins/test-backend.sh'
-            junit 'target/surefire-reports/**/TEST*.xml'
-          }
-        }
-        stage('Frontend Java 7') {
-          agent {
-            node {
-              label 'java7'
-            }
-
-          }
-          steps {
-            unstash 'Java 7'
-            sh './jenkins/test-frontend.sh'
-            junit 'target/test-results/**/TEST*.xml'
-          }
-        }
-        stage('Performance Java 7') {
-          agent {
-            node {
-              label 'java7'
-            }
-
-          }
-          steps {
-            unstash 'Java 7'
-            sh './jenkins/test-performance.sh'
-          }
-        }
-        stage('Static Java 7') {
-          agent {
-            node {
-              label 'java7'
-            }
-
-          }
-          steps {
-            unstash 'Java 7'
-            sh './jenkins/test-static.sh'
-          }
-        }
-      }
     }
-    stage('Confirm Deploy') {
-      steps {
-        timeout(time: 3, unit: 'MINUTES' ) {
-          input(message: "Okay to Deploy to Staging?", ok: "Let's Do it!")
-        }
-      }
-    }
-    stage('Fluffy Deploy') {
-      agent {
-        node {
-          label 'java7'
-        }
-
-      }
-      steps {
-        unstash 'Java 7'
-        sh './jenkins/deploy.sh staging'
-      }
-    }
-  }
 }
