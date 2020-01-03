@@ -11,11 +11,19 @@ spec:
     command:
     - cat
     tty: true
+    volumeMounts:
+      - name: maven-cache
+        mountPath: /root/.m2/repository
   - name: busybox
     image: busybox
     command:
     - cat
     tty: true
+  volumes:
+    - name: maven-cache
+      hostPath:
+        path: /tmp
+        type: Directory
 """
         }
     }
